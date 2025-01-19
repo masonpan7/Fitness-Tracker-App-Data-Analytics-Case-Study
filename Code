@@ -1,0 +1,72 @@
+# Load necessary libraries
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+
+# Load activity data
+activity_data <- read_csv("/kaggle/input/fitbit/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+
+# Load sleep data
+sleep_data <- read_csv("/kaggle/input/fitbit/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/sleepDay_merged.csv")
+
+# Convert date columns to Date format
+activity_data <- activity_data %>%
+  mutate(ActivityDate = as.Date(ActivityDate, format = "%m/%d/%Y"))
+
+# Clean the data by removing missing values and duplicates
+activity_data_clean <- activity_data %>%
+  drop_na() %>%
+  distinct(Id, ActivityDate, .keep_all = TRUE)
+
+# Convert date columns to Date format
+sleep_data <- sleep_data %>%
+  mutate(SleepDay = as.Date(SleepDay, format = "%m/%d/%Y"))
+
+# Clean the data by removing missing values and duplicates
+sleep_data_clean <- sleep_data %>%
+  drop_na() %>%
+  distinct(Id, SleepDay, .keep_all = TRUE)
+
+# Activity Data Analysis
+activity_summary <- activity_data_clean %>%
+  group_by(Id) %>%
+  summarise(
+    mean_steps = mean(TotalSteps, na.rm = TRUE),
+    mean_calories = mean(Calories, na.rm = TRUE),
+    mean_distance = mean(TotalDistance, na.rm = TRUE),
+    mean_sedentary_minutes = mean(SedentaryMinutes, na.rm = TRUE)
+  )
+print(n=33, activity_summary)
+
+# Sleep Data Analysis
+sleep_summary <- sleep_data_clean %>%
+  group_by(Id) %>%
+  summarise(
+    mean_sleep_minutes = mean(TotalMinutesAsleep, na.rm = TRUE),
+    mean_time_in_bed = mean(TotalTimeInBed, na.rm = TRUE),
+    sleep_efficiency = (mean(TotalMinutesAsleep) / mean(TotalTimeInBed)) * 100
+  )
+print(n=24, sleep_summary)
+
+# Steps vs Calories (Summarized)
+ggplot(activity_summary, aes(x = mean_steps, y = mean_calories)) +
+  geom_point(color = "blue", size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(title = "Mean Steps vs Mean Calories Burned", x = "Mean Steps", y = "Mean Calories Burned") +
+  theme_minimal()
+
+# Steps vs Sedentary Minutes (Summarized)
+ggplot(activity_summary, aes(x = mean_steps, y = mean_sedentary_minutes)) +
+  geom_point(color = "blue", size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(title = "Mean Steps vs Mean Sedentary Minutes", x = "Mean Steps", y = "Mean Sedentary Minutes") +
+  theme_minimal()
+
+sleep_data_clean <- sleep_data_clean %>%
+  mutate(SleepEfficiency = TotalMinutesAsleep / TotalTimeInBed * 100)
+
+ggplot(sleep_data_clean, aes(x = SleepEfficiency)) +
+  geom_histogram(fill = "blue", color = "white", bins = 20) +
+  labs(title = "Distribution of Sleep Efficiency", x = "Sleep Efficiency (%)", y = "Frequency") +
+  theme_minimal()
